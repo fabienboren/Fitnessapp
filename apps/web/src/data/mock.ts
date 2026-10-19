@@ -9,6 +9,7 @@ export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 
 export interface PlannedMeal {
   id: string;
+  recipeId: string;
   slot: MealSlot;
   time: string;
   recipeName: string;
@@ -41,10 +42,10 @@ export const user = {
 };
 
 export const todayMeals: PlannedMeal[] = [
-  { id: "m1", slot: "breakfast", time: "7:30", recipeName: "Overnight oats with berries", servings: 1, prepMinutes: 5, kcal: 410, logged: true },
-  { id: "m2", slot: "lunch", time: "12:30", recipeName: "Lemon chickpea grain bowl", servings: 1, prepMinutes: 15, kcal: 560, logged: true },
-  { id: "m3", slot: "snack", time: "16:00", recipeName: "Greek yogurt & walnuts", servings: 1, prepMinutes: 2, kcal: null, logged: false },
-  { id: "m4", slot: "dinner", time: "19:00", recipeName: "Miso salmon, rice & greens", servings: 2, prepMinutes: 30, kcal: 640, logged: false },
+  { id: "m1", recipeId: "r1", slot: "breakfast", time: "7:30", recipeName: "Overnight oats with berries", servings: 1, prepMinutes: 5, kcal: 410, logged: true },
+  { id: "m2", recipeId: "r2", slot: "lunch", time: "12:30", recipeName: "Lemon chickpea grain bowl", servings: 1, prepMinutes: 15, kcal: 560, logged: true },
+  { id: "m3", recipeId: "r4", slot: "snack", time: "16:00", recipeName: "Greek yogurt & walnuts", servings: 1, prepMinutes: 2, kcal: null, logged: false },
+  { id: "m4", recipeId: "r3", slot: "dinner", time: "19:00", recipeName: "Miso salmon, rice & greens", servings: 2, prepMinutes: 30, kcal: 640, logged: false },
 ];
 
 export const nutrition = {
@@ -60,6 +61,7 @@ export const nutrition = {
   ] satisfies Macro[],
 };
 
+/** Last seven days, oldest first; the final entry is today. */
 export const activityWeek: DayActivity[] = [
   { day: "Mon", minutes: 35 },
   { day: "Tue", minutes: 20 },
@@ -67,7 +69,7 @@ export const activityWeek: DayActivity[] = [
   { day: "Thu", minutes: 45 },
   { day: "Fri", minutes: 30 },
   { day: "Sat", minutes: null },
-  { day: "Sun", minutes: 25 },
+  { day: "Sun", minutes: null },
 ];
 
 export const activityGoalMinutes = 150;
@@ -97,8 +99,8 @@ export const dietOptions = ["No preference", "Vegetarian", "Vegan", "Pescatarian
 export const allergenOptions = ["Peanuts", "Tree nuts", "Milk", "Eggs", "Fish", "Shellfish", "Soy", "Wheat / gluten", "Sesame"];
 export const dislikeOptions = ["Mushrooms", "Cilantro", "Olives", "Spicy food", "Tofu", "Seafood"];
 
-export const integrations = [
-  { id: "health", name: "Apple Health / Health Connect", description: "Import workouts and steps", status: "not_connected" as const },
-  { id: "grocer", name: "Retailer handoff", description: "Send your list to a supported store", status: "unavailable" as const },
-  { id: "recipes", name: "Recipe & nutrition provider", description: "Catalog data source", status: "connected" as const },
+export const integrations: { id: string; name: string; description: string; status: "connected" | "not_connected" | "unavailable" }[] = [
+  { id: "health", name: "Apple Health / Health Connect", description: "Import workouts and steps", status: "not_connected" },
+  { id: "grocer", name: "Partner Store", description: "Send your list to the store to check out", status: "connected" },
+  { id: "recipes", name: "Recipe & nutrition provider", description: "Catalog data source", status: "connected" },
 ];

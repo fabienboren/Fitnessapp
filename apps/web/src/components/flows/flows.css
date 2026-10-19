@@ -1,0 +1,110 @@
+/* ---------- Search ---------- */
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-subtle);
+}
+.search:focus-within { border-color: var(--accent); box-shadow: var(--focus-ring); }
+.search__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  outline: none;
+}
+.search__input:focus-visible { box-shadow: none; }
+
+/* ---------- Recipe list ---------- */
+.recipe-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.recipe-list__empty { padding: var(--space-6) 0; text-align: center; font-size: var(--text-sm); }
+.recipe-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  text-align: left;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.recipe-row:hover:not(:disabled) { border-color: var(--accent); }
+.recipe-row:disabled { cursor: not-allowed; background: var(--surface-muted); }
+.recipe-row:disabled .recipe-row__name { color: var(--text-subtle); }
+.recipe-row:focus-visible { border-radius: var(--radius-md); }
+.recipe-row__thumb {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.recipe-row__text { flex: 1; min-width: 0; }
+.recipe-row__name { font-weight: 600; font-size: var(--text-sm); }
+.recipe-row__meta { font-size: var(--text-xs); color: var(--text-muted); }
+
+/* ---------- Recipe facts ---------- */
+.facts { display: flex; flex-direction: column; gap: var(--space-4); }
+.facts__row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.fact { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--space-3) var(--space-2); }
+.fact + .fact { border-left: 1px solid var(--border); }
+.fact__value { font-weight: 700; font-size: var(--text-lg); letter-spacing: -0.02em; }
+.fact__label { font-size: var(--text-xs); }
+
+/* ---------- Validation checklist ---------- */
+.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.check-row { display: flex; gap: var(--space-3); padding: var(--space-3) 0; font-size: var(--text-sm); }
+.check-row + .check-row { border-top: 1px solid var(--border); }
+.check-row__icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+.check-row--ok .check-row__icon { background: var(--accent-soft); color: var(--accent); }
+.check-row--warn .check-row__icon { background: var(--info-soft); color: var(--info); }
+.check-row--fail .check-row__icon { background: var(--danger-soft); color: var(--danger); }
+
+/* ---------- Option tiles (log flow) ---------- */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--space-2); }
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 64px;
+  padding: var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.tile small { font-weight: 400; font-size: var(--text-xs); color: var(--text-muted); }
+.tile[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.tile:focus-visible { border-radius: var(--radius-md); }
+
+/* ---------- Estimate ---------- */
+.estimate { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md); background: var(--surface-muted); }
+.estimate .facts__row { background: var(--surface); }
+.estimate__note { font-size: var(--text-sm); }

@@ -4,6 +4,7 @@ import { Button } from "../components/ui/Button";
 import { Icon, type IconName } from "../components/ui/Icon";
 import { Badge, ChoiceCard, Chip, Field, Segmented, Toggle } from "../components/ui/primitives";
 import { Logo } from "../components/layout/Logo";
+import { ServingsStepper } from "../components/flows/ServingsStepper";
 import { allergenOptions, dietOptions, dislikeOptions } from "../data/mock";
 import "./onboarding.css";
 
@@ -281,27 +282,12 @@ export function OnboardingPage() {
                 />
               </Group>
               <Group label="Cooking for">
-                <div className="stepper-input" role="group" aria-label="Number of people">
-                  <button
-                    type="button"
-                    aria-label="Fewer people"
-                    disabled={p.household <= 1}
-                    onClick={() => set("household", p.household - 1)}
-                  >
-                    −
-                  </button>
-                  <output aria-live="polite" className="tabular">
-                    {p.household} {p.household === 1 ? "person" : "people"}
-                  </output>
-                  <button
-                    type="button"
-                    aria-label="More people"
-                    disabled={p.household >= 8}
-                    onClick={() => set("household", p.household + 1)}
-                  >
-                    +
-                  </button>
-                </div>
+                <ServingsStepper
+                  value={p.household}
+                  onChange={(v) => set("household", v)}
+                  max={8}
+                  unit={["person", "people"]}
+                />
               </Group>
               <Group label="Units">
                 <Segmented

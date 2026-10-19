@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { Button } from "../components/ui/Button";
+import { useToast } from "../components/ui/Toast";
+import { LogMealSheet, type MealLog } from "../components/flows/LogMealSheet";
+import { LogActivitySheet } from "../components/flows/LogActivitySheet";
+import { recipeById } from "../data/catalog";
 import { Icon } from "../components/ui/Icon";
 import { Badge, Card, CardHeader, ProgressBar, ProgressRing } from "../components/ui/primitives";
 import {
@@ -11,6 +15,7 @@ import {
   nutrition,
   todayMeals,
   user,
+  type DayActivity,
   type PlannedMeal,
 } from "../data/mock";
 import "./dashboard.css";
@@ -22,13 +27,47 @@ const slotLabel: Record<PlannedMeal["slot"], string> = {
   snack: "Snack",
 };
 
-export function DashboardPage() {
-  const [meals, setMeals] = useState(todayMeals);
-  const [proposal, setProposal] = useState<"open" | "accepted" | "dismissed">("open");
+/** Seed logs for the meals already marked as eaten in the sample data. */
+const initialLogs: MealLog[] = todayMeals
+  .filter((m) => m.logged)
+  .map((m) => {
+    const r = recipeById(m.recipeId);
+    return {
+      id: `log-${m.id}`,
+      name: m.recipeName,
+      plannedMealId: m.id,
+      recipeId: r.id,
+      portion: 1,
+      time: m.time,
+      kcal: r.kcal,
+      protein: r.protein,
+      carbs: r.carbs,
+      fat: r.fat,
+      source: "calculated",
+    };
+  });
 
+const sum = (logs: MealLog[], key: "kcal" | "protein" | "carbs" | "fat") =>
+  logs.reduce((t, l) => t + (l[key] ?? 0), 0);
+
+export function DashboardPage() {
+  const toast = useToast();
+  const [logs, setLogs] = useState<MealLog[]>(initialLogs);
+  const [activity, setActivity] = useState<DayActivity[]>(activityWeek);
+  const [proposal, setProposal] = useState<"open" | "accepted" | "dismissed">("open");
+  const [mealSheet, setMealSheet] = useState<{ open: boolean; preselect: PlannedMeal | null }>({ open: false, preselect: null });
+  const [activityOpen, setActivityOpen] = useState(false);
+
+  // A planned meal counts as eaten only when a log points at it.
+  const meals = todayMeals.map((m) => ({ ...m, logged: logs.some((l) => l.plannedMealId === m.id) }));
+  const extraLogs = logs.filter((l) => !l.plannedMealId);
   const loggedCount = meals.filter((m) => m.logged).length;
-  const toggleLogged = (id: string) =>
-    setMeals((ms) => ms.map((m) => (m.id === id ? { ...m, logged: !m.logged } : m)));
+  const withData = logs.filter((l) => l.kcal !== null);
+  const missingData = logs.length - withData.length;
+  const kcalLogged = sum(withData, "kcal");
+  const macros = nutrition.macros.map((m) => ({ ...m, grams: logs.length ? sum(withData, m.key) : null }));
+
+  const unlog = (plannedMealId: string) => setLogs((l) => l.filter((x) => x.plannedMealId !== plannedMealId));
 
   const now = new Date();
   const today = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
@@ -43,10 +82,12 @@ export function DashboardPage() {
           <h1 className="page-title">{greeting}, {user.firstName}</h1>
         </div>
         <div className="page-head__actions">
-          <Button variant="secondary" icon="activity">
+          <Button variant="secondary" icon="activity" onClick={() => setActivityOpen(true)}>
             Log activity
           </Button>
-          <Button icon="plus">Log a meal</Button>
+          <Button icon="plus" onClick={() => setMealSheet({ open: true, preselect: null })}>
+            Log a meal
+          </Button>
         </div>
       </header>
 
@@ -88,11 +129,43 @@ export function DashboardPage() {
                   type="button"
                   className={`log-btn ${m.logged ? "is-logged" : ""}`}
                   aria-pressed={m.logged}
-                  onClick={() => toggleLogged(m.id)}
+                  title={m.logged ? "Undo log" : undefined}
+                  onClick={() => (m.logged ? unlog(m.id) : setMealSheet({ open: true, preselect: m }))}
                 >
                   {m.logged ? <Icon name="check" size={16} /> : <Icon name="plus" size={16} />}
                   <span>{m.logged ? "Logged" : "Log"}</span>
                   <span className="sr-only"> {m.recipeName}</span>
+                </button>
+              </li>
+            ))}
+            {extraLogs.map((l) => (
+              <li key={l.id} className="meal">
+                <div className="meal__time tabular">{l.time}</div>
+                <div className="meal__body">
+                  <span className="meal__slot">Not planned</span>
+                  <span className="meal__name">{l.name}</span>
+                  <span className="meal__meta">
+                    {l.portion} {l.portion === 1 ? "serving" : "servings"}
+                    <span aria-hidden="true">·</span>
+                    {l.kcal === null ? (
+                      <Badge tone="warning" icon="alert">
+                        No nutrition data
+                      </Badge>
+                    ) : (
+                      <span className="tabular">~{l.kcal} kcal</span>
+                    )}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="log-btn is-logged"
+                  aria-pressed
+                  title="Undo log"
+                  onClick={() => setLogs((list) => list.filter((x) => x.id !== l.id))}
+                >
+                  <Icon name="check" size={16} />
+                  <span>Logged</span>
+                  <span className="sr-only"> {l.name}</span>
                 </button>
               </li>
             ))}
@@ -108,12 +181,12 @@ export function DashboardPage() {
             action={<Badge tone="info">Estimated</Badge>}
           />
           <div className="nutrition">
-            <ProgressRing value={nutrition.kcalLogged} max={nutrition.kcalTarget} label="Calories logged vs target">
-              <span className="ring-value tabular">{nutrition.kcalLogged.toLocaleString()}</span>
+            <ProgressRing value={kcalLogged} max={nutrition.kcalTarget} label="Calories logged vs target">
+              <span className="ring-value tabular">{kcalLogged.toLocaleString()}</span>
               <span className="subtle ring-caption tabular">of {nutrition.kcalTarget.toLocaleString()} kcal</span>
             </ProgressRing>
             <ul className="macros">
-              {nutrition.macros.map((m) => (
+              {macros.map((m) => (
                 <li key={m.key} className="macro">
                   <div className="row spread">
                     <span className="row gap-2 macro__label">
@@ -130,7 +203,10 @@ export function DashboardPage() {
             </ul>
           </div>
           <p className="footnote">
-            <Icon name="info" size={14} /> Values are calculated from recipe data. Snack excluded until logged.
+            <Icon name="info" size={14} />
+            {missingData > 0
+              ? `${missingData} logged ${missingData === 1 ? "item has" : "items have"} no nutrition data and ${missingData === 1 ? "isn't" : "aren't"} included.`
+              : "Calculated from recipe data for the meals you've logged."}
           </p>
         </Card>
 
@@ -180,7 +256,7 @@ export function DashboardPage() {
 
         {/* Activity */}
         <Card className="dash__activity" aria-labelledby="activity-title">
-          <ActivityCard />
+          <ActivityCard days={activity} />
         </Card>
 
         {/* Groceries */}
@@ -211,20 +287,48 @@ export function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      <LogMealSheet
+        open={mealSheet.open}
+        preselect={mealSheet.preselect}
+        plannedMeals={meals}
+        onClose={() => setMealSheet({ open: false, preselect: null })}
+        onLog={(log) => {
+          setLogs((l) => [...l, log]);
+          setMealSheet({ open: false, preselect: null });
+          toast({ message: `Logged ${log.name}` });
+        }}
+      />
+      <LogActivitySheet
+        open={activityOpen}
+        onClose={() => setActivityOpen(false)}
+        onLog={(a) => {
+          // The last entry is today.
+          setActivity((days) => days.map((d, i) => (i === days.length - 1 ? { ...d, minutes: (d.minutes ?? 0) + a.minutes } : d)));
+          setActivityOpen(false);
+          toast({ message: `Logged ${a.minutes} min of activity`, action: { label: "See trends", to: "/app/progress" } });
+        }}
+      />
     </div>
   );
 }
 
-function ActivityCard() {
-  const logged = activityWeek.reduce((sum, d) => sum + (d.minutes ?? 0), 0);
-  const missingDays = activityWeek.filter((d) => d.minutes === null).length;
-  const peak = Math.max(...activityWeek.map((d) => d.minutes ?? 0), 1);
+/** Last seven days, oldest first, ending today. */
+function ActivityCard({ days }: { days: DayActivity[] }) {
+  const logged = days.reduce((sum, d) => sum + (d.minutes ?? 0), 0);
+  const missingDays = days.filter((d) => d.minutes === null).length;
+  const peak = Math.max(...days.map((d) => d.minutes ?? 0), 1);
+  const label = (i: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (days.length - 1 - i));
+    return d.toLocaleDateString(undefined, { weekday: "short" });
+  };
 
   return (
     <>
       <CardHeader
         id="activity-title"
-        title="Activity this week"
+        title="Activity · last 7 days"
         subtitle={`${logged} of ${activityGoalMinutes} min goal`}
         action={
           <Button to="/app/progress" variant="ghost" size="sm" iconRight="chevronRight">
@@ -233,12 +337,12 @@ function ActivityCard() {
         }
       />
       <div className="week" role="list" aria-label="Logged activity minutes per day">
-        {activityWeek.map((d) => (
+        {days.map((d, i) => (
           <div
-            key={d.day}
+            key={i}
             role="listitem"
-            className="week__col"
-            aria-label={d.minutes === null ? `${d.day}: nothing logged` : `${d.day}: ${d.minutes} minutes`}
+            className={`week__col ${i === days.length - 1 ? "is-today" : ""}`}
+            aria-label={d.minutes === null ? `${label(i)}: nothing logged` : `${label(i)}: ${d.minutes} minutes`}
           >
             <div className="week__track">
               {d.minutes === null ? (
@@ -247,13 +351,13 @@ function ActivityCard() {
                 <div className="week__bar" style={{ height: `${(d.minutes / peak) * 100}%` }} />
               )}
             </div>
-            <span className="week__day">{d.day.slice(0, 1)}</span>
+            <span className="week__day">{i === days.length - 1 ? "Today" : label(i).slice(0, 1)}</span>
           </div>
         ))}
       </div>
       {missingDays > 0 && (
         <p className="footnote">
-          <Icon name="info" size={14} /> {missingDays} days with nothing logged — shown as gaps, not zero.
+          <Icon name="info" size={14} /> {missingDays} {missingDays === 1 ? "day" : "days"} with nothing logged — shown as gaps, not zero.
         </p>
       )}
     </>
