@@ -101,6 +101,5 @@ export const dislikeOptions = ["Mushrooms", "Cilantro", "Olives", "Spicy food", 
 
 export const integrations: { id: string; name: string; description: string; status: "connected" | "not_connected" | "unavailable" }[] = [
   { id: "health", name: "Apple Health / Health Connect", description: "Import workouts and steps", status: "not_connected" },
-  { id: "grocer", name: "Partner Store", description: "Send your list to the store to check out", status: "connected" },
   { id: "recipes", name: "Recipe & nutrition provider", description: "Catalog data source", status: "connected" },
 ];

@@ -4,6 +4,7 @@ import { Button } from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
 import { Badge, Card, Chip, Field, Segmented, Toggle } from "../components/ui/primitives";
 import { allergenOptions, dietOptions, integrations, user } from "../data/mock";
+import { disconnectKroger, getRetailers, krogerAuthorizeUrl, type Retailer } from "../lib/retailers";
 import "./settings.css";
 
 const sections = [
@@ -32,6 +33,11 @@ export function SettingsPage() {
   const [notify, setNotify] = useState({ prep: true, log: false, weekly: true, grocery: false });
   const [consent, setConsent] = useState({ ai: true, health: false, analytics: false });
   const [confirmDelete, setConfirmDelete] = useState("");
+  const [retailers, setRetailers] = useState<Retailer[] | null>(null);
+
+  useEffect(() => {
+    getRetailers().then(setRetailers).catch(() => setRetailers([]));
+  }, []);
 
   // Deep links like /app/settings#privacy
   useEffect(() => {
@@ -203,6 +209,54 @@ export function SettingsPage() {
                   {i.status === "unavailable" && <Badge>Unavailable here</Badge>}
                 </li>
               ))}
+              {retailers?.map((r) => (
+                <li key={r.id} className="integration">
+                  <span className="integration__icon">
+                    <Icon name="cart" size={18} />
+                  </span>
+                  <div className="stack integration__text">
+                    <strong>{r.name}</strong>
+                    <span className="muted">
+                      {r.id === "kroger"
+                        ? "Match your list to Kroger products and add them to your Kroger cart"
+                        : "Match your list to Walmart products and open a ready-to-check-out cart"}
+                    </span>
+                  </div>
+                  {!r.configured ? (
+                    <Badge>Not set up</Badge>
+                  ) : r.id === "kroger" && !r.connected ? (
+                    <Button variant="secondary" size="sm" onClick={() => (window.location.href = krogerAuthorizeUrl())}>
+                      Connect
+                    </Button>
+                  ) : r.id === "kroger" ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        disconnectKroger().then(() =>
+                          setRetailers((list) => list!.map((x) => (x.id === "kroger" ? { ...x, connected: false } : x))),
+                        )
+                      }
+                    >
+                      Disconnect
+                    </Button>
+                  ) : (
+                    <Badge tone="accent">Ready</Badge>
+                  )}
+                </li>
+              ))}
+              {retailers?.length === 0 && (
+                <li className="integration">
+                  <span className="integration__icon">
+                    <Icon name="cart" size={18} />
+                  </span>
+                  <div className="stack integration__text">
+                    <strong>Kroger &amp; Walmart</strong>
+                    <span className="muted">Can't reach the NutriFit server right now.</span>
+                  </div>
+                  <Badge>Unavailable here</Badge>
+                </li>
+              )}
             </ul>
           </Section>
 

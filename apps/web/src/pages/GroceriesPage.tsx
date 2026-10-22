@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { StoreHandoffSheet } from "../components/flows/StoreHandoffSheet";
 import { Button, IconButton } from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
 import { Badge, Card, ProgressBar, Segmented } from "../components/ui/primitives";
@@ -20,6 +22,24 @@ export function GroceriesPage() {
   const [regenOpen, setRegenOpen] = useState(false);
   const [handoff, setHandoff] = useState<Handoff>("idle");
   const [resolving, setResolving] = useState<{ id: string; value: string } | null>(null);
+  const [store, setStore] = useState("the store");
+  const [params, setParams] = useSearchParams();
+
+  // Back from Kroger's sign-in page.
+  useEffect(() => {
+    const result = params.get("kroger");
+    if (!result) return;
+    if (result === "connected") {
+      toast({ message: "Kroger account connected" });
+      setHandoff("review");
+    } else {
+      toast({ message: result === "denied" ? "Kroger sign-in was cancelled" : "Couldn't connect to Kroger. Try again." });
+    }
+    setParams((p) => {
+      p.delete("kroger");
+      return p;
+    }, { replace: true });
+  }, [params, setParams, toast]);
 
   const checked = items.filter((i) => i.checked).length;
   const unresolved = items.filter((i) => i.unresolved);
@@ -60,7 +80,7 @@ export function GroceriesPage() {
         <div className="notice handoff-status" role="status">
           <Icon name="external" size={16} />
           <span>
-            <strong>Basket opened at Partner Store — not ordered yet.</strong> Finish checkout there. We'll mark this list as
+            <strong>Basket opened at {store} — not ordered yet.</strong> Finish checkout there. We'll mark this list as
             ordered only if the store confirms it.
           </span>
         </div>
@@ -294,70 +314,15 @@ export function GroceriesPage() {
       </Sheet>
 
       {/* Retailer handoff */}
-      <Sheet
+      <StoreHandoffSheet
         open={handoff === "review"}
         onClose={() => setHandoff("idle")}
-        title="Send to Partner Store"
-        description="Review matches before opening the store. Nothing is purchased here."
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setHandoff("idle")}>
-              Cancel
-            </Button>
-            <Button iconRight="external" onClick={() => setHandoff("handed_off")}>
-              Continue to store
-            </Button>
-          </>
-        }
-      >
-        <div className="stack gap-6">
-          <div className="handoff-stats">
-            <div>
-              <span className="stat tabular">{items.length - checked - 3}</span>
-              <span className="subtle">matched</span>
-            </div>
-            <div>
-              <span className="stat tabular">2</span>
-              <span className="subtle">need a choice</span>
-            </div>
-            <div>
-              <span className="stat tabular">1</span>
-              <span className="subtle">unavailable</span>
-            </div>
-          </div>
-          <div className="stack gap-3">
-            <p className="eyebrow">Needs your choice</p>
-            {[
-              { name: "Feta", options: "3 products · from €2.10" },
-              { name: "Salmon fillets", options: "2 products · from €8.90" },
-            ].map((m) => (
-              <div key={m.name} className="match-row">
-                <div className="stack">
-                  <strong>{m.name}</strong>
-                  <span className="muted">{m.options}</span>
-                </div>
-                <Button size="sm" variant="secondary">
-                  Choose
-                </Button>
-              </div>
-            ))}
-            <div className="match-row">
-              <div className="stack">
-                <strong>White miso</strong>
-                <span className="muted">Not available at this store — stays on your list</span>
-              </div>
-              <Badge tone="warning">Unavailable</Badge>
-            </div>
-          </div>
-          <div className="notice">
-            <Icon name="info" size={16} />
-            <span>
-              Estimated basket €54–61. Final prices, substitutions and availability are set by the store at checkout.
-              Checked items aren't sent.
-            </span>
-          </div>
-        </div>
-      </Sheet>
+        items={items.filter((i) => !i.checked)}
+        onHandedOff={(name) => {
+          setStore(name);
+          setHandoff("handed_off");
+        }}
+      />
     </div>
   );
 }
